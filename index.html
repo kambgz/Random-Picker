@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Picker Wheel</title>
+    <link rel="stylesheet" href="style.css">
+<style>
+
+/* Pengaturan umum untuk halaman */
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f9;
+}
+
+/* Container utama */
+.container {
+    margin-top: 30px;
+    padding: 0 10px;
+}
+
+/* Menyesuaikan ukuran canvas agar responsif */
+canvas {
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    margin: 20px auto;
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+/* Tampilan kontrol (tombol dan input) */
+.controls {
+    margin-top: 20px;
+}
+
+input {
+    padding: 10px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 250px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+}
+
+button {
+    padding: 10px 15px;
+    font-size: 14px;
+    margin: 5px;
+    cursor: pointer;
+    width: 100%;
+    max-width: 250px;
+    box-sizing: border-box;
+}
+
+/* Menambahkan batas bawah pada tombol agar lebih rapi */
+button:last-child {
+    margin-bottom: 20px;
+}
+
+/* Tampilan hasil di bawah roda */
+#result {
+    margin-top: 20px;
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Modal Pop-up */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgb(0, 0, 0);
+    background-color: rgba(0, 0, 0, 0.4);
+    padding-top: 60px;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 400px;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Tombol untuk menghapus histori */
+#clearHistoryButton {
+    padding: 10px 15px;
+    font-size: 14px;
+    margin-top: 10px;
+    cursor: pointer;
+    width: 100%;
+    max-width: 250px;
+    background-color: #FF6347;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+
+#clearHistoryButton:hover {
+    background-color: #FF4500;
+}
+
+/* Tampilan untuk daftar histori */
+#historyList {
+    list-style-type: none;
+    padding: 0;
+}
+
+#historyList li {
+    padding: 5px;
+    border-bottom: 1px solid #ddd;
+}
+
+/* Responsif untuk ponsel */
+@media (max-width: 600px) {
+    h1 {
+        font-size: 24px;
+    }
+
+    input, button {
+        font-size: 16px;
+        width: 90%;
+    }
+
+    canvas {
+        width: 90%; /* Menyesuaikan canvas dengan ukuran ponsel */
+        height: auto;
+    }
+}
+
+/* Dark mode styling */
+body.dark-mode {
+    background-color: #121212;
+    color: white;
+}
+
+button.dark-mode {
+    background-color: #333;
+    color: white;
+}
+
+/* Statistik */
+#statistics {
+    margin-top: 20px;
+    font-size: 16px;
+    color: #555;
+}
+
+</style>
+</head>
+<body>
+    <div class="container">
+        <h1>Random Picker Wheel</h1>
+
+        <!-- Canvas untuk roda berada di atas tombol -->
+        <canvas id="wheelCanvas" width="500" height="500"></canvas>
+        
+        <!-- Kolom Input Nama -->
+        <input type="text" id="itemInput" placeholder="Enter a name">
+        
+        <!-- Tombol Add, Spin, Remove Last, View History -->
+        <button id="addButton">Add</button>
+        <button id="spinButton">Spin</button>
+        <button id="removeButton">Remove Last</button>
+        <button id="viewHistoryButton">View History</button>
+
+        <!-- Tombol Reset, Pilih File, Import, Export, Toggle Dark Mode -->
+        <button id="resetButton">Reset Wheel</button>
+        <input type="file" id="importFile" accept=".txt,.json">
+        <button id="importButton">Import Items</button>
+        <button id="exportButton">Export Items</button>
+        <button id="toggleThemeButton">Toggle Dark Mode</button>
+
+        <div id="result"></div>
+    </div>
+
+    <!-- Modal untuk hasil spin -->
+    <div id="resultModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <p id="modalResult">Result: </p>
+            <div id="modalButtons">
+                <button id="deleteButton">Delete From Wheel</button>
+                <button id="cancelButton">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal untuk histori -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>History</h3>
+            <ul id="historyList">
+                <li>Tidak ada histori yang ditemukan</li>
+            </ul>
+            
+            <button id="clearHistoryButton">Clear History</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+<script>
+const canvas = document.getElementById('wheelCanvas');
+const ctx = canvas.getContext('2d');
+const spinButton = document.getElementById('spinButton');
+const addButton = document.getElementById('addButton');
+const removeButton = document.getElementById('removeButton');
+const itemInput = document.getElementById('itemInput');
+const resultDiv = document.getElementById('result');
+const resultModal = document.getElementById('resultModal');
+const historyModal = document.getElementById('historyModal');
+const historyList = document.getElementById('historyList');
+const viewHistoryButton = document.getElementById('viewHistoryButton');
+const clearHistoryButton = document.getElementById('clearHistoryButton');
+const deleteButton = document.getElementById('deleteButton');
+const cancelButton = document.getElementById('cancelButton');
+const closeModalButtons = document.querySelectorAll('.close');
+const importButton = document.getElementById('importButton');
+const importFile = document.getElementById('importFile');
+const exportButton = document.getElementById('exportButton');
+const toggleThemeButton = document.getElementById('toggleThemeButton');
+const resetButton = document.getElementById('resetButton');
+resetButton.addEventListener('click', () => {
+    if (items.length > 0) {
+        const confirmReset = confirm('Are you sure you want to reset the wheel?');
+        if (confirmReset) {
+            items = []; // Kosongkan array items
+            history = []; // Kosongkan histori
+            drawWheel(); // Gambar ulang roda tanpa nama
+            alert('The wheel has been reset!');
+        }
+    } else {
+        alert('The wheel is already empty!');
+    }
+});
+let items = ['Saya', 'Kamu', 'Dia', 'Kita'];
+let angle = 0;
+
+let history = [];
+let selectedItem = '';
+let deletedItems = [];
+let secretMode = 0; // 0 = normal, 1 = selalu nama pertama, 2 = kecualikan nama pertama
+
+const colors = ['#FFD700', '#FF4500', '#32CD32', '#1E90FF', '#8A2BE2', '#FF6347', '#00CED1', '#D2691E'];
+
+// Menyimpan timestamp untuk mendeteksi klik cepat
+let lastTabTime = 0;
+let tabCount = 0;
+
+function drawWheel() {
+    const radius = canvas.width / 2;
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const segmentAngle = (2 * Math.PI) / items.length;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    items.forEach((item, index) => {
+        const startAngle = index * segmentAngle;
+        const endAngle = startAngle + segmentAngle;
+        const colorIndex = index % colors.length;
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.fillStyle = colors[colorIndex];
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(startAngle + segmentAngle / 2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 20px Arial'; // Memperbesar tulisan
+        ctx.fillText(item, radius - 60, 5);
+        ctx.restore();
+    });
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#333';
+    ctx.stroke();
+}
+
+function spinWheel() {
+    const filteredItems = secretMode === 2 ? items.slice(1) : items; // Jika mode rahasia 2, kecualikan nama pertama
+    const targetIndex = secretMode === 1 ? 0 : Math.floor(Math.random() * filteredItems.length);
+    const targetItem = filteredItems[targetIndex];
+    const targetAngle = (360 / items.length) * items.indexOf(targetItem);
+    const randomAngle = 3600 + targetAngle; // Spin lebih dari 10 putaran
+    const spinTime = 5000;
+    const currentDateTime = new Date().toLocaleString(); // Ambil waktu sekarang
+    let startTime = null;
+
+    function rotate(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+
+        if (elapsed < spinTime) {
+            angle = (randomAngle * (elapsed / spinTime)) % 360;
+            drawRotatedWheel();
+            requestAnimationFrame(rotate);
+        } else {
+            angle = targetAngle;
+            drawRotatedWheel();
+            resultDiv.textContent = `Result: ${targetItem}`;
+
+            history.push({ item: targetItem, date: currentDateTime }); // Simpan nama dan waktu ke histori
+            selectedItem = targetItem;
+            showModal(targetItem);
+        }
+    }
+
+    requestAnimationFrame(rotate);
+}
+
+function drawRotatedWheel() {
+    ctx.save();
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((angle * Math.PI) / 180);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    drawWheel();
+    ctx.restore();
+}
+
+addButton.addEventListener('click', () => {
+    const newItem = itemInput.value.trim();
+    if (newItem) {
+        items.push(newItem);
+        itemInput.value = '';
+        drawWheel();
+    }
+});
+
+itemInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+        const newItem = itemInput.value.trim();
+        if (newItem) {
+            items.push(newItem);
+            itemInput.value = '';
+            drawWheel();
+        }
+    }
+});
+
+importButton.addEventListener('click', () => {
+    const file = importFile.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                if (Array.isArray(importedData.items) && Array.isArray(importedData.history)) {
+                    items = importedData.items; // Impor nama item
+                    history = importedData.history; // Impor histori
+                    drawWheel();
+                    drawHistory();
+                } else {
+                    alert('Invalid file format!');
+                }
+            } catch {
+                alert('Error reading file!');
+            }
+        };
+        
+        reader.readAsText(file);
+    } else {
+        alert('No file selected!');
+    }
+})
+exportButton.addEventListener('click', () => {
+    // Gabungkan data items dan history untuk diekspor
+    const data = {
+        items: items, // Nama-nama yang ada di roda
+        history: history, // Riwayat hasil dengan waktu
+    };
+
+    // Konversi data ke format JSON dengan indentasi untuk kemudahan pembacaan
+    const dataStr = JSON.stringify(data, null, 2); 
+    const blob = new Blob([dataStr], { type: 'application/json' }); // Buat file dengan format JSON
+    const url = URL.createObjectURL(blob);
+
+    // Buat tautan unduhan dan unduh file
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'wheel_data.json'; // Nama file default saat diunduh
+    document.body.appendChild(link);
+    link.click(); // Simulasikan klik pada tautan
+    document.body.removeChild(link); // Hapus tautan setelah unduhan
+});
+
+
+toggleThemeButton.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+});
+
+// Mengelola fitur rahasia dengan deteksi penekanan Tab
+itemInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Tab') {
+        event.preventDefault();
+        const currentTime = new Date().getTime();
+        
+        if (currentTime - lastTabTime < 300) {
+            tabCount++;
+        } else {
+            tabCount = 1;
+        }
+        lastTabTime = currentTime;
+
+        if (tabCount === 1) {
+            secretMode = 1; // Always First
+        } else if (tabCount === 2) {
+            secretMode = 2; // Exclude First
+        } else if (tabCount === 3) {
+            secretMode = 0; // Normal
+        }
+
+
+    }
+});
+
+removeButton.addEventListener('click', () => {
+    if (items.length > 0) {
+        items.pop();
+        drawWheel();
+    } else {
+        alert('No more items to remove!');
+    }
+});
+
+spinButton.addEventListener('click', () => {
+    if (items.length > 0) {
+        spinWheel();
+    } else {
+        alert('Please add items to the wheel!');
+    }
+});
+
+function showModal(result) {
+    const modalResult = document.getElementById('modalResult');
+    modalResult.textContent = `Result: ${result}`;
+    resultModal.style.display = "block";
+}
+
+deleteButton.addEventListener('click', () => {
+    const indexToDelete = items.indexOf(selectedItem);
+    if (indexToDelete !== -1) {
+        deletedItems.push(items[indexToDelete]);
+        items.splice(indexToDelete, 1);
+        drawWheel();
+        resultModal.style.display = "none";
+    }
+});
+
+cancelButton.addEventListener('click', () => {
+    resultModal.style.display = "none";
+});
+
+viewHistoryButton.addEventListener('click', () => {
+    drawHistory();
+    historyModal.style.display = "block";
+});
+
+function drawHistory() {
+    historyList.innerHTML = ''; // Kosongkan daftar histori
+    history.forEach((entry) => {
+        const li = document.createElement('li');
+        li.textContent = `${entry.item} (${entry.date})`; // Tampilkan nama item dan waktu
+
+        const deleteHistoryButton = document.createElement('button');
+        deleteHistoryButton.textContent = 'Delete';
+        deleteHistoryButton.addEventListener('click', () => {
+            const indexToDeleteHistory = history.indexOf(entry);
+            if (indexToDeleteHistory !== -1) {
+                history.splice(indexToDeleteHistory, 1); // Hapus dari histori
+                drawHistory(); // Perbarui tampilan histori
+                
+                // Tambahkan kembali nama ke roda tanpa waktu
+                if (!items.includes(entry.item)) {
+                    items.push(entry.item);
+                    drawWheel();
+                }
+            }
+        });
+
+        li.appendChild(deleteHistoryButton);
+        historyList.appendChild(li);
+    });
+}
+
+
+closeModalButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        resultModal.style.display = "none";
+        historyModal.style.display = "none";
+    });
+});
+
+window.addEventListener('click', (event) => {
+    if (event.target === resultModal) {
+        resultModal.style.display = "none";
+    }
+    if (event.target === historyModal) {
+        historyModal.style.display = "none";
+    }
+});
+
+clearHistoryButton.addEventListener('click', () => {
+    // Mengembalikan nama-nama yang tidak ada di roda ke daftar items
+    deletedItems.forEach(item => {
+        if (!items.includes(item)) {
+            items.push(item);
+        }
+    });
+    deletedItems = []; // Kosongkan daftar nama yang dihapus
+    history = []; // Kosongkan histori
+    drawWheel(); // Perbarui tampilan roda
+    drawHistory(); // Perbarui tampilan histori
+});
+
+drawWheel();
+
+</script>
+</body>
+</html>
