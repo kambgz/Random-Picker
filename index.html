@@ -9,18 +9,22 @@
 
 /* Pengaturan umum untuk halaman */
 body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    margin: 0;
-    padding: 0;
-    background-color: #f4f4f9;
-}
-
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background-image: url('kucing.jpg'); /* Ganti dengan path atau URL gambar Anda */
+            background-size: cover; /* Gambar mengisi seluruh layar */
+            background-position: center center; /* Menempatkan gambar di tengah layar */
+            background-attachment: fixed; /* Membuat gambar tetap saat halaman digulir */
+        }
 /* Container utama */
 .container {
-    margin-top: 30px;
-    padding: 0 10px;
-}
+            margin-top: 30px;
+            padding: 0 10px;
+            background-color: rgba(255, 255, 255, 0.8); /* Transparansi agar teks lebih terlihat di atas gambar */
+            border-radius: 10px;
+        }
 
 /* Menyesuaikan ukuran canvas agar responsif */
 canvas {
